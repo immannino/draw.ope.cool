@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Site Behavior tags -->
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Basic site info-->
+    <meta name="title" data-hid="title" content="">
+    <meta name="description" data-hid="description" content="">
+
+    <!-- Open Graph (Facebook/Linkedin) tags -->
+    <!-- Testing tool: https://developers.facebook.com/tools/debug/ -->
+    <meta property="og:site_name" content="">
+    <meta property="og:locale" content="en_US">
+    <meta property="og:url" content="http://">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="">
+    <meta property="og:description" content="">
+    <meta property="og:image" content="">
+
+    <!-- Twitter tags -->
+    <!-- Testing tool: https://cards-dev.twitter.com/validator -->
+    <meta name="twitter:site" content="http://">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="">
+    <meta name="twitter:description" content="">
+    <meta name="twitter:image" content="">
+    <meta name="twitter:image:alt" content="">
+    <title>Vue Template | spaghet</title>
+    
+    <!-- Inline SVG Emoji Icon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>">
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue-toast-notification@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.11.3/lib/p5.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/vue-toast-notification@2/dist/theme-sugar.css" rel="stylesheet">
+    <!-- New.css
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">  -->
+
+    <!-- Magick CSS -->
+</head>
+<body>
+    <main id="app">
+        <div id="p5" ref="p5"></div>
+        <button id="b" @click="undo">Undo</button>
+    </main>
+    <div id="app">
+    </div>
+    <script>
+        /**
+         * UndoRedo Processing - https://openprocessing.org/sketch/131411/
+         * UndoRedo P5.js - https://editor.p5js.org/inoon/sketches/7yoo0zW6X
+         * */
+        class Undo {
+            constructor(amountOfImages = 10, layer = p5.instance) {
+                this.images = new UndoImages(amountOfImages, layer)
+            }
+
+            undo() {
+                this.images.prev()
+                this.images.show()
+            }
+
+            redo() {
+                this.images.next()
+                this.images.show()
+            }
+
+            capture() {
+                this.images.capture()
+            }
+        }
+        
+        class UndoImages {
+            constructor(amountOfImages, layer) {
+                this.amount = amountOfImages
+                this.layer = layer
+                this.img = [];
+                this.current = 0
+                this.img[0] = this.layer.get();
+            }
+
+            capture() {
+                this.img.splice(this.current + 1);
+                this.img[this.img.length] = this.layer.get();
+                if (this.img.length > this.amount) {
+                    this.img.shift();
+                }
+
+                this.current = this.img.length - 1;
+                console.log(this.current, this.img.length)
+            }
+
+            prev() {
+                console.log(this.current)
+                if (this.current > 0) {
+                    this.current -= 1;
+                }
+            }
+
+            next() {
+                if (this.current < this.img.length - 1) {
+                    this.current += 1;
+                }
+            }
+
+            show() {
+                this.layer.clear();
+                console.log(`this.image[${this.current}]`)
+                this.layer.image(this.img[this.current], 0, 0);
+            }
+        }
+
+        const app = Vue.createApp({
+            el: '#app',
+            data() {
+                return {
+                    p5: null,
+                    message: 'Hehe',
+                    x: 100,
+                    y: 100,
+                    strokeWeight: 10,
+                    layerDraw: null,
+                    layerBrush: null,
+                    slider: null,
+                    undo: null
+                }
+            },
+            mounted() {
+                this.p5 = new p5(this.p5Setup, this.$refs.p5)
+            },
+            methods: {
+                p5Setup(p) {
+                    p.x = window.innerWidth
+                    p.y = window.innerHeight
+                    p.strokeWeight = this.strokeWeight
+                    p.setup = this.setup
+                    p.draw = this.draw
+                    p.mouseReleased = () => this.undo.capture();
+                },
+                setup() {
+                    // const p = new p5();
+                    this.p5.createCanvas(window.innerWidth, window.innerHeight)
+                    this.p5.background(255)
+
+                    // undo setup
+                    this.layerDraw = this.p5.createGraphics(this.p5.width, this.p5.height);
+                    this.layerBrush = this.p5.createGraphics(this.p5.width, this.p5.height);
+                    this.undo = new Undo(50, this.layerDraw);
+                    this.undo.capture();
+
+                    // User Interface
+                    this.homeButton();
+                    this.resizeSlider();
+                    this.undoButton();
+                    this.redoButton();
+                    this.clearButton();
+                    this.flipImageButton();
+                    this.rotateButton();
+                    this.shareButton();
+                },
+                draw() {
+                    this.strokeWeight = this.slider.value()
+                    this.layerDraw.strokeWeight(this.strokeWeight)
+
+                    this.layerBrush.ellipse(this.p5.mouseX, this.p5.mouseY)
+
+                    if (this.p5.mouseIsPressed) {
+                        this.layerDraw.stroke('springgreen');
+                        this.layerDraw.line(this.p5.mouseX, this.p5.mouseY, this.p5.pmouseX, this.p5.pmouseY)
+                    }
+
+                    this.p5.image(this.layerDraw, 0, 0);
+                    this.p5.image(this.layerBrush, 0, 0);
+                    this.layerBrush.clear();
+
+                    /* Demo
+                    // this.p5.fill(255, 0, 200, 25);
+                    // this.p5.noStroke();
+                    // this.p5.ellipse(this.p5.x, this.p5.y, 48, 48);
+
+                    // this.p5.x = this.p5.x + this.p5.random(-10, 10);
+                    // this.p5.y = this.p5.y + this.p5.random(-10, 10);
+                    */
+                },
+                // Configs and buttons
+                homeButton() {
+                    let button = this.p5.createButton('< Home');
+                    button.position(10, 10);
+                    button.mousePressed(() => console.log('home'));
+                },
+                resizeSlider() {
+                    this.slider = this.p5.createSlider(10, 36);
+                    this.slider.position(0, window.innerHeight - 170);
+                    this.slider.style('transform', 'rotate(-90deg) translateY(-44px)')
+                },
+                undoButton() {
+                    let button = this.p5.createButton('↪');
+                    button.position(10, window.innerHeight - 90);
+                    button.style('transform', 'rotate(180deg)')
+                    button.mousePressed(() => this.undo.undo());
+                },
+                redoButton() {
+                    let button = this.p5.createButton('↩');
+                    button.position(10, window.innerHeight - 70);
+                    button.style('transform', 'rotate(180deg)')
+                    button.mousePressed(() => this.undo.redo());  
+                },
+                clearButton() {
+                    let button = this.p5.createButton('🗑');
+                    button.position(10, window.innerHeight - 30);
+                    button.style('border-radius', '50%')
+                    button.mousePressed(() => {
+                        this.setup();
+                    });
+                },
+                flipImageButton() {},
+                rotateButton() {},
+                shareButton() {},
+                repaint() {
+                    console.log('tee hee')
+                }
+                
+            }
+        })
+        app.use(VueToast)
+        app.mount('#app');
+    </script>
+    <style>
+        html, body { height: 0; width: 0; margin: 0; overflow: none; }
+        main {
+            position: relative;
+        }
+
+        main > div {
+            z-index: 1;
+        }
+
+        main > button {
+            position: absolute;
+            top: 50%;
+            right: 50%;
+            z-index: 99999;
+        }
+    </style>
+</body>
+</html>
